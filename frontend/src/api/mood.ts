@@ -1,1 +1,7 @@
-import {request} from '../utils/request';import type {Mood,MoodTag} from '../types';export const listMoods=(date?:string)=>request<Mood[]>(`/moods${date?`?date=${date}`:''}`);export const saveMood=(payload:{mood_level:number;mood_tags:MoodTag[];note:string;record_date:string})=>request<Mood>('/moods',{method:'POST',body:JSON.stringify(payload)});export const updateMood=(id:number,payload:{mood_level:number;mood_tags:MoodTag[];note:string;record_date:string})=>request<Mood>(`/moods/${id}`,{method:'PUT',body:JSON.stringify(payload)});export const deleteMood=(id:number)=>request(`/moods/${id}`,{method:'DELETE'});
+import {request} from '../utils/request';
+import type {FollowUpSource, Mood, MoodTag} from '../types';
+
+export const listMoods=(date?:string)=>request<Mood[]>(`/moods${date?`?date=${date}`:''}`);
+export const saveMood=(payload:{mood_level:number;mood_tags:MoodTag[];note:string;record_date:string;source?:FollowUpSource})=>request<Mood>('/moods',{method:'POST',body:JSON.stringify(payload)});
+export const updateMood=(id:number,payload:{mood_level:number;mood_tags:MoodTag[];note:string;record_date:string;source?:FollowUpSource})=>request<Mood>(`/moods/${id}`,{method:'PUT',body:JSON.stringify(payload)});
+export const deleteMood=(id:number)=>request(`/moods/${id}`,{method:'DELETE'});

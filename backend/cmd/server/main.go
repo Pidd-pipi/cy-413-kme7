@@ -28,7 +28,7 @@ func main() {
 		os.Exit(1)
 	}
 	logger.Info(constants.LogDBConnected)
-	if e = db.AutoMigrate(&model.User{}, &model.Mood{}, &model.Assessment{}, &model.Journal{}, &model.UserAssessment{}); e != nil {
+	if e = db.AutoMigrate(&model.User{}, &model.Mood{}, &model.Assessment{}, &model.Journal{}, &model.UserAssessment{}, &model.FollowUp{}); e != nil {
 		logger.Error("database migrate failed", "error", e)
 		os.Exit(1)
 	}
@@ -37,15 +37,18 @@ func main() {
 	mr := repository.NewMoodRepository(db)
 	ar := repository.NewAssessmentRepository(db)
 	jr := repository.NewJournalRepository(db)
+	fr := repository.NewFollowUpRepository(db)
+	tx := repository.NewTxManager(db)
 	us := service.NewUserService(ur, logger)
-	ms := service.NewMoodService(mr, logger)
+	fs := service.NewFollowUpService(fr, mr, logger)
+	ms := service.NewMoodService(mr, tx, fs, logger)
 	as := service.NewAssessmentService(ar, logger)
 	js := service.NewJournalService(jr, logger)
 	if e = as.Seed(); e != nil {
 		logger.Error("assessment seed failed", "error", e)
 		os.Exit(1)
 	}
-	h := router.Handlers{User: handler.NewUserHandler(us, as, logger, cfg.JWTSecret, cfg.JWTIssuer), Mood: handler.NewMoodHandler(ms, logger), Assessment: handler.NewAssessmentHandler(as, logger), Journal: handler.NewJournalHandler(js, logger)}
+	h := router.Handlers{User: handler.NewUserHandler(us, as, logger, cfg.JWTSecret, cfg.JWTIssuer), Mood: handler.NewMoodHandler(ms, logger), Assessment: handler.NewAssessmentHandler(as, logger), Journal: handler.NewJournalHandler(js, logger), FollowUp: handler.NewFollowUpHandler(fs, logger)}
 	if e = router.New(cfg, h, logger).Run(":" + cfg.Port); e != nil {
 		logger.Error("server stopped", "error", e)
 		os.Exit(1)

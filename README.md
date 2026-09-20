@@ -21,6 +21,7 @@ MindGarden 是一款用于温柔记录每日心情、完成轻量自我觉察测
 
 - **心情花园**：记录 1–10 的心情指数、多个情绪标签和备注，查看最近趋势曲线。
 - **情绪记录**：按日期筛选，保存情绪列表；`MoodSelector` 在 Dashboard 和 Moods 页面共享。
+- **低落情绪次日回访闭环**：心情指数 ≤ 3 自动生成次日回访并记录首次触发来源（心情花园/情绪记录）；同日多次低落只合并为一条，指数回升自动撤销，撤销后再次低落重新挂起且保留首次来源；回访到期后只能由本人确认「已好转 / 仍困扰」，重复及并发提交只保留第一条，已提交结果不受后续修改影响。顶部角标、心情花园、情绪记录、日记页共享同一回访状态。
 - **心理测评**：浏览压力/睡眠测评，答题后得到分数、结果和关照建议。
 - **日记本**：写作私密日记，记录天气和心情，并用时间轴回顾；`MoodCard` 同时服务情绪记录和日记页。
 - **个人中心**：修改资料、头像链接，查看完成过的测评报告。
@@ -87,8 +88,10 @@ Vite 会把本地 `/api` 请求重写到 `http://localhost:19413/v1`；Docker �
 | POST | `/api/v1/auth/login` | 登录并取得 JWT |
 | GET / PUT | `/api/v1/users/me` | 读取/更新个人资料 |
 | GET | `/api/v1/users/reports` | 测评报告汇总 |
-| GET / POST | `/api/v1/moods` | 查询（支持 `date`）/创建情绪 |
-| PUT / DELETE | `/api/v1/moods/:id` | 修改/删除情绪 |
+| GET / POST | `/api/v1/moods` | 查询（支持 `date`）/创建情绪；`mood_level<=3` 时自动生成次日回访，body 可带 `source=mood|mood_list` 记录首次触发来源 |
+| PUT / DELETE | `/api/v1/moods/:id` | 修改/删除情绪；在同一事务内联动回访（回升撤销/再低落重挂/已提交保持不变） |
+| GET | `/api/v1/follow-ups` | 查询回访（支持 `status=pending/responded/revoked`、`trigger_date=YYYY-MM-DD`） |
+| POST | `/api/v1/follow-ups/:id/respond` | 本人确认回访结果（`result=better|struggling`）；重复及并发提交只保留第一条 |
 | GET | `/api/v1/assessments` | 测评列表 |
 | POST | `/api/v1/assessments/:id/take` | 提交答案与生成结果 |
 | POST | `/api/v1/assessments` | 创建测评（仅 admin） |
@@ -96,6 +99,19 @@ Vite 会把本地 `/api` 请求重写到 `http://localhost:19413/v1`；Docker �
 | PUT / DELETE | `/api/v1/journals/:id` | 修改/删除日记 |
 
 更精简的 OpenAPI 描述见 [`backend/api/openapi.yaml`](backend/api/openapi.yaml)。
+
+## 低落情绪回访闭环规则
+
+`follow_ups` 表对 `(user_id, trigger_date)` 建唯一索引，状态机为 `pending → responded / revoked`：
+
+1. **生成**：心情指数 ≤ 3 的情绪在事务内生成次日回访，记录首次触发来源（心情花园 `mood` / 情绪记录 `mood_list`）与首条低落情绪 id；> 3 不生成。
+2. **合并**：同一触发日再次记录低落，只保留同一条回访（咨询锁串行化 + 唯一索引兜底），首次来源与首条情绪 id 不变。
+3. **撤销/重挂**：当天所有低落记录被改回 > 3（或删除）时，待回访自动 `revoked`；之后当天再次低落则重新 `pending`，仍保留首次来源。
+4. **结果不可变**：回访到期（次日及以后）后只能由本人确认 `better`/`struggling`；一旦 `responded`，后续任何情绪增删改都不再影响该结果。
+5. **并发只留一条**：回应接口使用 `UPDATE ... WHERE status='pending' AND scheduled_date<=today` 条件更新，重复及并发提交只有第一条生效，冲突时返回唯一那条记录（幂等）。
+6. **一致性**：前端通过共享 `followUpStore` + `useFollowUps` 在顶部角标、心情花园、情绪记录、日记页读取同一快照，刷新页面后与服务端状态一致；日记按 `created_at` 日期关联当日回访。
+
+联动写入通过 `pg_advisory_xact_lock(hashtextextended('mood-day:<uid>:<date>'))` 串行化，情绪写入与回访变更在同一数据库事务内提交。
 
 ## 环境变量
 
@@ -117,11 +133,11 @@ Vite 会把本地 `/api` 请求重写到 `http://localhost:19413/v1`；Docker �
 ├── .env.example
 ├── frontend/
 │   ├── src/
-│   │   ├── api/                  # user/mood/assessment/journal 请求
-│   │   ├── stores/               # auth、user、mood、theme 状态
+│   │   ├── api/                  # user/mood/assessment/journal/followUp 请求
+│   │   ├── stores/               # auth、user、mood、followUp、theme 状态
 │   │   ├── types/                # 跨层实体类型
-│   │   ├── components/common/    # 共享业务组件与错误边界
-│   │   ├── hooks/                # useAuth/useTheme/useMoodStats
+│   │   ├── components/common/    # 共享业务组件（含 FollowUpCard/FollowUpBadge）与错误边界
+│   │   ├── hooks/                # useAuth/useTheme/useMoodStats/useFollowUps
 │   │   ├── pages/                # 五个核心页面
 │   │   ├── router/               # 路由与 JWT 守卫
 │   │   ├── utils/                # request、日期、颜色和主题工具

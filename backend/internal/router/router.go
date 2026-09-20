@@ -17,6 +17,7 @@ type Handlers struct {
 	Mood       *handler.MoodHandler
 	Assessment *handler.AssessmentHandler
 	Journal    *handler.JournalHandler
+	FollowUp   *handler.FollowUpHandler
 }
 
 func New(cfg config.Config, h Handlers, l *slog.Logger) *gin.Engine {
@@ -34,6 +35,7 @@ func New(cfg config.Config, h Handlers, l *slog.Logger) *gin.Engine {
 		RegisterMoods(g, h.Mood, auth)
 		RegisterAssessments(g, h.Assessment, auth, l)
 		RegisterJournals(g, h.Journal, auth)
+		RegisterFollowUps(g, h.FollowUp, auth)
 	}
 	return r
 }

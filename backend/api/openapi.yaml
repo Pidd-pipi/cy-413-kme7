@@ -3,6 +3,13 @@ info: {title: MindGarden API, version: 1.0.0}
 paths:
   /v1/auth/register: {post: {summary: Register}}
   /v1/auth/login: {post: {summary: Login}}
-  /v1/moods: {get: {summary: List moods}, post: {summary: Create mood}}
+  /v1/moods:
+    get: {summary: List moods}
+    post: {summary: Create mood (auto-schedules/merges/revokes next-day follow-up when mood_level <= 3)}
+  /v1/moods/{id}: {put: {summary: Update mood and reconcile follow-up}, delete: {summary: Delete mood and reconcile follow-up}}
   /v1/assessments: {get: {summary: List assessments}}
   /v1/journals: {get: {summary: List journals}, post: {summary: Create journal}}
+  /v1/follow-ups:
+    get: {summary: List follow-ups, parameters: [{name: status, in: query, schema: {type: string, enum: [pending, responded, revoked]}}, {name: trigger_date, in: query, schema: {type: string, format: date}}]}
+  /v1/follow-ups/{id}/respond:
+    post: {summary: Owner confirms better/struggling; duplicate or concurrent submissions keep the first one}

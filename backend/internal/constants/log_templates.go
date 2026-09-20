@@ -26,4 +26,12 @@ const (
 	LogHealthChecked      = "health check completed"
 	LogErrorWrapped       = "application error wrapped"
 	LogSeeded             = "sample assessments seeded"
+	LogFollowUpScheduled  = "FollowUp scheduled for next-day check-in"
+	LogFollowUpMerged     = "FollowUp merged with existing same-day record"
+	LogFollowUpRevoked    = "FollowUp revoked after mood level recovered"
+	LogFollowUpReopened   = "FollowUp reopened after low mood recorded again"
+	LogFollowUpListed     = "FollowUp list requested"
+	LogFollowUpResponded  = "FollowUp result submitted by owner"
+	LogFollowUpDuplicate  = "FollowUp duplicate submission ignored"
+	LogFollowUpReconciled = "FollowUp reconciled after mood change"
 )

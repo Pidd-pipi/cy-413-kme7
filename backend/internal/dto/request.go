@@ -20,6 +20,8 @@ type MoodRequest struct {
 	MoodTags   []string `json:"mood_tags" validate:"required,min=1,max=5"`
 	Note       string   `json:"note" validate:"max=500"`
 	RecordDate string   `json:"record_date" validate:"required,datetime=2006-01-02"`
+	// Source 首次触发回访的来源：mood（心情花园）/ mood_list（情绪记录）
+	Source string `json:"source" validate:"omitempty,oneof=mood mood_list"`
 }
 type AssessmentRequest struct {
 	Title       string `json:"title" validate:"required,max=100"`
@@ -37,4 +39,9 @@ type JournalRequest struct {
 	MoodLevel int    `json:"mood_level" validate:"min=1,max=10"`
 	Weather   string `json:"weather" validate:"max=30"`
 	IsPrivate bool   `json:"is_private"`
+}
+
+// FollowUpRespondRequest 本人对回访的确认结果；重复及并发提交只保留第一条。
+type FollowUpRespondRequest struct {
+	Result string `json:"result" validate:"required,oneof=better struggling"`
 }
