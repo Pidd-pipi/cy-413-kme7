@@ -20,6 +20,8 @@ type MoodRequest struct {
 	MoodTags   []string `json:"mood_tags" validate:"required,min=1,max=5"`
 	Note       string   `json:"note" validate:"max=500"`
 	RecordDate string   `json:"record_date" validate:"required,datetime=2006-01-02"`
+	// Source 记录本条目由哪个页面种下，低落回访用它记录“首次触发来源”：dashboard / moods。
+	Source string `json:"source" validate:"omitempty,oneof=dashboard moods"`
 }
 type AssessmentRequest struct {
 	Title       string `json:"title" validate:"required,max=100"`
@@ -37,4 +39,8 @@ type JournalRequest struct {
 	MoodLevel int    `json:"mood_level" validate:"min=1,max=10"`
 	Weather   string `json:"weather" validate:"max=30"`
 	IsPrivate bool   `json:"is_private"`
+}
+type CheckInRespondRequest struct {
+	Result string `json:"result" validate:"required,oneof=improved still_troubled"`
+	Note   string `json:"note" validate:"max=500"`
 }

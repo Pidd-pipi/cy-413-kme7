@@ -26,4 +26,11 @@ const (
 	LogHealthChecked      = "health check completed"
 	LogErrorWrapped       = "application error wrapped"
 	LogSeeded             = "sample assessments seeded"
+	LogCheckInScheduled   = "MoodCheckIn scheduled for next day with first trigger source"
+	LogCheckInMerged      = "MoodCheckIn low mood merged into existing follow-up"
+	LogCheckInRevoked     = "MoodCheckIn revoked after mood level recovered"
+	LogCheckInReactivated = "MoodCheckIn re-scheduled after low mood recorded again"
+	LogCheckInResponded   = "MoodCheckIn result submitted by owner"
+	LogCheckInConflict    = "MoodCheckIn concurrent response conflicted with existing result"
+	LogCheckInListed      = "MoodCheckIn list requested"
 )

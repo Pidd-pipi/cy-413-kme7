@@ -21,8 +21,9 @@ MindGarden 是一款用于温柔记录每日心情、完成轻量自我觉察测
 
 - **心情花园**：记录 1–10 的心情指数、多个情绪标签和备注，查看最近趋势曲线。
 - **情绪记录**：按日期筛选，保存情绪列表；`MoodSelector` 在 Dashboard 和 Moods 页面共享。
+- **低落情绪回访闭环**：心情指数不高于 3 时自动生成**次日回访**并记录首次触发来源（心情花园 / 情绪记录）；同日再次低落只合并一条，指数回升自动撤销；回访只能由本人确认「已好转 / 仍困扰」，重复与并发提交只保留第一条，已提交结果不受后续情绪修改影响。心情花园、情绪记录、日记本刷新后回访状态一致。
 - **心理测评**：浏览压力/睡眠测评，答题后得到分数、结果和关照建议。
-- **日记本**：写作私密日记，记录天气和心情，并用时间轴回顾；`MoodCard` 同时服务情绪记录和日记页。
+- **日记本**：写作私密日记，记录天气和心情，并用时间轴回顾；`MoodCard` 同时服务情绪记录和日记页，日记时间轴可关联当日低落回访。
 - **个人中心**：修改资料、头像链接，查看完成过的测评报告。
 - **JWT + 角色**：写入数据必须携带 JWT；测评创建接口仅允许 `admin` 角色。
 - **主题切换**：晨雾绿、夜间花园、薰衣草三套 CSS 变量主题。
@@ -88,7 +89,9 @@ Vite 会把本地 `/api` 请求重写到 `http://localhost:19413/v1`；Docker �
 | GET / PUT | `/api/v1/users/me` | 读取/更新个人资料 |
 | GET | `/api/v1/users/reports` | 测评报告汇总 |
 | GET / POST | `/api/v1/moods` | 查询（支持 `date`）/创建情绪 |
-| PUT / DELETE | `/api/v1/moods/:id` | 修改/删除情绪 |
+| PUT / DELETE | `/api/v1/moods/:id` | 修改/删除情绪（写操作自动对齐次日回访） |
+| GET | `/api/v1/checkins` | 查询低落回访（支持 `date` 按回访日、`status` 过滤） |
+| PUT | `/api/v1/checkins/:id/respond` | 本人确认回访结果（`improved` / `still_troubled`） |
 | GET | `/api/v1/assessments` | 测评列表 |
 | POST | `/api/v1/assessments/:id/take` | 提交答案与生成结果 |
 | POST | `/api/v1/assessments` | 创建测评（仅 admin） |
@@ -96,6 +99,17 @@ Vite 会把本地 `/api` 请求重写到 `http://localhost:19413/v1`；Docker �
 | PUT / DELETE | `/api/v1/journals/:id` | 修改/删除日记 |
 
 更精简的 OpenAPI 描述见 [`backend/api/openapi.yaml`](backend/api/openapi.yaml)。
+
+### 低落情绪回访闭环规则
+
+1. 任意情绪写操作（创建 / 修改 / 删除）落库后，服务端按「用户 + 当天」重新对齐：当天存在心情指数 **≤ 3** 的记录时，若尚无回访则生成一条**次日回访**（`mood_check_ins` 表，`(user_id, trigger_date)` 唯一），并以请求里的 `source`（`dashboard` 心情花园 / `moods` 情绪记录）记录**首次触发来源**。
+2. 同日再次记录低落情绪：合并进同一条待回访，不新增记录，首次触发来源与首次低落指数保持不变。
+3. 当天情绪指数回升（不再有 ≤ 3 的记录，例如把低落记录改成高分或删除）：待回访自动**撤销**；撤销后当天再次低落会重新激活。
+4. 回访只能由本人在到期后通过 `PUT /api/v1/checkins/:id/respond` 确认 `improved`（已好转）或 `still_troubled`（仍困扰）；仓储层用条件 `UPDATE ... WHERE status='pending'` 保证**重复及并发提交只保留第一条**：相同结果重复提交幂等返回，冲突结果返回 `409`。
+5. 一旦提交结果，记录永久冻结，后续情绪修改/删除不再影响它。
+6. 前端心情花园、情绪记录、日记本均从同一组 `/checkins` 接口读取服务端状态，刷新后三个页面状态一致；日记本时间轴按低落触发日关联展示当日回访。
+
+> 回访状态机：`pending`（待回访）→ `improved` / `still_troubled`（本人确认，终态）；`pending` ↔ `revoked`（指数回升撤销、再次低落重新激活）。
 
 ## 环境变量
 
@@ -117,11 +131,11 @@ Vite 会把本地 `/api` 请求重写到 `http://localhost:19413/v1`；Docker �
 ├── .env.example
 ├── frontend/
 │   ├── src/
-│   │   ├── api/                  # user/mood/assessment/journal 请求
+│   │   ├── api/                  # user/mood/assessment/journal/checkin 请求
 │   │   ├── stores/               # auth、user、mood、theme 状态
 │   │   ├── types/                # 跨层实体类型
-│   │   ├── components/common/    # 共享业务组件与错误边界
-│   │   ├── hooks/                # useAuth/useTheme/useMoodStats
+│   │   ├── components/common/    # 共享业务组件与错误边界（含 CheckInCard/CheckInReminder）
+│   │   ├── hooks/                # useAuth/useTheme/useMoodStats/useCheckIns
 │   │   ├── pages/                # 五个核心页面
 │   │   ├── router/               # 路由与 JWT 守卫
 │   │   ├── utils/                # request、日期、颜色和主题工具

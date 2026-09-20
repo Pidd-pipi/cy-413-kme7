@@ -15,3 +15,22 @@ func AssessmentText(c string) string {
 	return m[c]
 }
 func ThemeColor(t string) string { return constants.ThemeColors[t] }
+
+// CheckInStatusText 回访状态中文文案，供日志与返回文本复用。
+func CheckInStatusText(status string) string {
+	m := map[string]string{
+		constants.CheckInStatusPending:       "待回访",
+		constants.CheckInStatusImproved:      "已好转",
+		constants.CheckInStatusStillTroubled: "仍困扰",
+		constants.CheckInStatusRevoked:       "已撤销",
+	}
+	return m[status]
+}
+
+// CheckInSourceText 首次触发来源中文文案：心情花园 / 情绪记录。
+func CheckInSourceText(source string) string {
+	if source == constants.CheckInSourceDashboard {
+		return "心情花园"
+	}
+	return "情绪记录"
+}

@@ -3,6 +3,21 @@ info: {title: MindGarden API, version: 1.0.0}
 paths:
   /v1/auth/register: {post: {summary: Register}}
   /v1/auth/login: {post: {summary: Login}}
-  /v1/moods: {get: {summary: List moods}, post: {summary: Create mood}}
+  /v1/moods:
+    get: {summary: List moods}
+    post:
+      summary: Create mood
+      description: 心情指数不高于 3 时自动生成次日回访（MoodCheckIn），source 记录首次触发来源（dashboard/moods）。
+  /v1/moods/{id}: {put: {summary: Update mood, description: 更新后按当天是否仍有低落记录对齐回访；指数回升撤销待回访，已提交结果不受影响。}, delete: {summary: Delete mood}}
+  /v1/checkins:
+    get:
+      summary: List mood check-ins
+      parameters:
+        - {name: date, in: query, schema: {type: string, format: date}, description: 按回访日过滤}
+        - {name: status, in: query, schema: {type: string, enum: [pending, improved, still_troubled, revoked]}}
+  /v1/checkins/{id}/respond:
+    put:
+      summary: 本人确认回访结果
+      description: 仅本人可提交 improved / still_troubled；重复及并发提交只保留第一条，冲突返回 409。
   /v1/assessments: {get: {summary: List assessments}}
   /v1/journals: {get: {summary: List journals}, post: {summary: Create journal}}

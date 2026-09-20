@@ -10,6 +10,7 @@ import (
 type MoodRepository interface {
 	Create(*model.Mood) error
 	List(uint, *time.Time) ([]model.Mood, error)
+	CountLow(uint, time.Time, int) (int64, error)
 	ByID(uint, uint) (*model.Mood, error)
 	Update(*model.Mood) error
 	Delete(*model.Mood) error
@@ -25,6 +26,18 @@ func (r *moodRepository) List(uid uint, date *time.Time) (out []model.Mood, e er
 	}
 	e = q.Order("record_date desc, id desc").Find(&out).Error
 	return
+}
+
+// CountLow 统计用户某天内心情指数不高于 threshold 的情绪记录条数，用于判断该天是否仍处于低落状态。
+func (r *moodRepository) CountLow(uid uint, day time.Time, threshold int) (int64, error) {
+	start := day.Truncate(24 * time.Hour)
+	var n int64
+	e := r.db.Model(&model.Mood{}).
+		Where("user_id = ?", uid).
+		Where("record_date >= ? AND record_date < ?", start, start.AddDate(0, 0, 1)).
+		Where("mood_level <= ?", threshold).
+		Count(&n).Error
+	return n, e
 }
 func (r *moodRepository) ByID(id, uid uint) (*model.Mood, error) {
 	var v model.Mood

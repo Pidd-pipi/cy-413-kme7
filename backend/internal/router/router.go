@@ -15,6 +15,7 @@ import (
 type Handlers struct {
 	User       *handler.UserHandler
 	Mood       *handler.MoodHandler
+	CheckIn    *handler.MoodCheckInHandler
 	Assessment *handler.AssessmentHandler
 	Journal    *handler.JournalHandler
 }
@@ -32,6 +33,7 @@ func New(cfg config.Config, h Handlers, l *slog.Logger) *gin.Engine {
 		g := r.Group(prefix)
 		RegisterUsers(g, h.User, auth)
 		RegisterMoods(g, h.Mood, auth)
+		RegisterCheckIns(g, h.CheckIn, auth)
 		RegisterAssessments(g, h.Assessment, auth, l)
 		RegisterJournals(g, h.Journal, auth)
 	}
